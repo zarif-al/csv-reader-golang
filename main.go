@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -20,14 +21,20 @@ type Customer struct {
 }
 
 func main() {
-
+	var wg sync.WaitGroup
 	records := make(chan []string)
 
 	go reader(records)
-	printRecords(records)
+	wg.Add(1)
+
+	go printRecords(records, &wg)
+
+	wg.Wait()
 }
 
-func printRecords(records chan []string) {
+func printRecords(records chan []string, wg *sync.WaitGroup) {
+
+	defer wg.Done()
 	for record := range records {
 
 		customer := Customer{}
