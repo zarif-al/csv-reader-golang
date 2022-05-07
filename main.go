@@ -2,13 +2,11 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -21,20 +19,23 @@ type Customer struct {
 }
 
 func main() {
-	var wg sync.WaitGroup
+
 	records := make(chan []string)
+	customersArray := make(chan string)
 
 	go reader(records)
-	wg.Add(1)
 
-	go printRecords(records, &wg)
+	go createArray(records, customersArray)
 
-	wg.Wait()
+	response := <-customersArray
+
+	fmt.Println(response)
+
 }
 
-func printRecords(records chan []string, wg *sync.WaitGroup) {
+func createArray(records chan []string, customersArray chan string) {
 
-	defer wg.Done()
+	defer close(customersArray)
 	for record := range records {
 
 		customer := Customer{}
@@ -57,14 +58,8 @@ func printRecords(records chan []string, wg *sync.WaitGroup) {
 
 		customer.EmailScheduleTime = t
 
-		b, err := json.Marshal(customer)
-		if err != nil {
-			fmt.Println("failed to marshal object", err)
-			return
-		}
-
-		fmt.Println(string(b))
 	}
+	customersArray <- "done"
 }
 
 func reader(records chan []string) {
@@ -94,7 +89,6 @@ func reader(records chan []string) {
 			log.Fatal(err)
 		}
 		records <- record
-
 	}
 
 }
